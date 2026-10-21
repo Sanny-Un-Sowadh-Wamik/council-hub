@@ -10,3 +10,4 @@ Re-entry conditions: SPY closes above ~769 on Oct 21 and Oct 22 with SMA50 flat/
 Known calendar: Oct 21 AMC: META, TSLA, TXN, LRCX. Oct 22: PG BMO. Oct 23: AXP. Oct 27: KO. Oct 28 FOMC. Oct 29 GDP+PCE. Oct 30 XOM, CVX.
 Data caveats: FMP plan blocks many calls; moomoo quote tools now available (preferred for fundamentals/analysts). Verify Fed hike / yields / oil claims with a second source before relying on them.
 Open questions: do moomoo sim orders support stop order types? Side enum values (assume BUY=1, SELL=2; verify on first order via history).
+ORB filter: OFF (compute and log only). VWAP+EMA9 filter: ON as veto only.
