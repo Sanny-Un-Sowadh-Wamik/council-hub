@@ -1,7 +1,7 @@
 # State (update every cycle)
 
 Updated: 2026-10-21 ~15:00 AEDT
-Mode: PAPER, stock lane primary. Crypto lane ON HOLD (flat; USDC $21.12 on Coinbase, no open orders).
+Mode: PAPER, stock lane primary. Crypto spot lane CLOSED. Council uses moomoo only; no Coinbase tools (leftover USDC $21.12 sits untouched on Coinbase).
 Paper account: moomoo 428122, sim $1,000,000 preloaded; ledger equity $1,000; positions: none.
 Open orders: none. Stage of profit lock: n/a.
 
