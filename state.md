@@ -34,3 +34,5 @@ Check 2026-10-21 15:40 UTC (11:40 ET): NO CHANGE. CHYM 30.73 (<31.08), OLLI 92.1
 Check 2026-10-21 16:40 UTC (12:40 ET): NO CHANGE. CHYM 30.74 (<31.08), OLLI 92.07 (<95.78), SPY 772.62. Ledger empty, nothing staged, no orders, nobody spawned. sim_trade_position_list backend_biz_error (known).
 
 Check 2026-10-21 16:10 UTC (12:10 ET): NO CHANGE. CHYM 30.67 (<31.08), OLLI 92.24 (<95.78), SPY 772.38. Ledger empty, nothing staged, no orders, nobody spawned. SPCX short now qty -2 @160.2 (cur 163.17, -$5.90), still unledgered/not council-made, untouched; owner to confirm origin. Screen not rerun (no new setup signal).
+
+Check 2026-10-21 16:38 UTC (12:38 ET): NO CHANGE. CHYM 30.70 (<31.08), OLLI 92.38 (<95.78), SPY 772.39, SUNB 79.13 (Research not PASS). Ledger empty, nothing staged, no orders, nobody spawned. SPCX short -2 @160.2 (cur 162.79) unledgered, untouched. Screen not rerun (no new setup signal).
