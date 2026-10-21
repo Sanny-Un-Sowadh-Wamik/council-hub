@@ -42,3 +42,6 @@ Idea: uptrend (higher highs/lows) -> consolidation -> volume-profile POC (price 
 
 ## Multi-timeframe alignment (owner shared 2026-10-21) - ADOPTED AS STRUCTURE
 Direction from the higher timeframe, entry timing from the lower one, kept aligned. Council mapping: daily chart (trend, setup, SMA50/200) + 60-min chart (bias: above/below its 20-bar average and last swing) set direction; 5-min chart (VWAP, EMA9) times the entry at the 30-min check. Never enter against the daily or 60-min direction: calls need both up, puts need both down; mixed = no trade. Stops sit beyond the failed level, targets at the next level (yesterday's high/low, POC, prior swing).
+
+## Put search (owner order 2026-10-21 23:34: "yes", add bearish screen)
+Research runs the BEARISH PASS every night and every 30-min live scan next to the bullish one (recipe in the Research playbook sec 2). Puts need daily + 60-min both down, price below VWAP, below falling SMA50 and SMA200, no earnings inside the hold, not already capitulated (20d < -25% or RSI < 30 = late, skip). SPY/QQQ puts are allowed when SPY closes below a falling SMA50 on volume (regime RISK-OFF = puts only, no calls). Same sizing, spread, fee and stop rules as calls. Put watchlist section in watchlist.md: "F. Put candidates".

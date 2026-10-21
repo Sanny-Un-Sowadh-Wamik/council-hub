@@ -47,3 +47,6 @@ Default: avoid new entries Oct 27-29 (macro cluster) unless Risk accepts the gap
 
 ## Rules for editing
 Research adds names from the nightly full-market scan (max 25 total; drop names whose setup broke or that sat 10 days without a trigger). Mark triggers: "waiting for pullback to X", "waiting for break of Y with volume". Quant writes exact trigger levels once a name is staged.
+
+## F. Put candidates (bearish scan 2026-10-21, NOT cleared; first-page names, 157 total hits)
+MTZ ~$187 (60d -44%), DY ~$252 (-41%), MGM ~$29 (-38%), CRS ~$373, CW ~$495, DRS ~$34, RBA ~$81, KLAR ~$13: all need daily+60-min down, event check, chain check. Several (MGM, WULF, QNT) already fell >25% in 20d = late.
