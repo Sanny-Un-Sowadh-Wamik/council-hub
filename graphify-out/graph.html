@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>graphify - graphify-out/graph.html</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Light</button>
+    <button type="button" data-theme-choice="dark">Dark</button>
+    <button type="button" data-theme-choice="system">System</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Node Info</h3>
+    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Communities</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">69 nodes &middot; 140 edges &middot; 7 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "roster_quant_skills", "label": "Quant Skills (quant-analyst, pandas-pro, statistical-analysis)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Quant Skills (quant-analyst, pandas-pro, statistical-analysis)", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "roster.md", "file_type": "code", "degree": 1}, {"id": "roster_data_quant", "label": "Data & Quant Agent", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 35.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Data & Quant Agent", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "roster.md", "file_type": "concept", "degree": 10}, {"id": "routine_c1", "label": "Step C1 Lock Plan", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step C1 Lock Plan", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "routine.md", "file_type": "concept", "degree": 5}, {"id": "routine_e", "label": "Step E End-of-Cycle Update", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step E End-of-Cycle Update", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "routine.md", "file_type": "concept", "degree": 3}, {"id": "routine_h", "label": "Step H Hourly Watch", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step H Hourly Watch", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "routine.md", "file_type": "concept", "degree": 5}, {"id": "routine_q1", "label": "Step Q1 Quant Plan Numbers", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step Q1 Quant Plan Numbers", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "routine.md", "file_type": "concept", "degree": 5}, {"id": "routine_q2", "label": "Step Q2 Quant Confirm", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step Q2 Quant Confirm", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "routine.md", "file_type": "concept", "degree": 3}, {"id": "routine_s1", "label": "Step S1 Sentiment Filter", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step S1 Sentiment Filter", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "routine.md", "file_type": "concept", "degree": 3}, {"id": "charter_drawdown_ladder", "label": "Loss Halts and Drawdown Ladder", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Loss Halts and Drawdown Ladder", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "charter.md", "file_type": "rationale", "degree": 2}, {"id": "charter_portfolio_heat_limits", "label": "Portfolio Heat, Gap, Sector and Correlation Limits", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Portfolio Heat, Gap, Sector and Correlation Limits", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "charter.md", "file_type": "rationale", "degree": 3}, {"id": "charter_profit_lock", "label": "Profit Lock (Stages 1-3)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Profit Lock (Stages 1-3)", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "charter.md", "file_type": "rationale", "degree": 6}, {"id": "charter_sizing_rule", "label": "Sizing Rule (1% risk, 20% position)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Sizing Rule (1% risk, 20% position)", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "charter.md", "file_type": "rationale", "degree": 6}, {"id": "charter_stop_rule", "label": "Stop = entry - 1.5 x ATR(14), T1 >= 3R", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Stop = entry - 1.5 x ATR(14), T1 >= 3R", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "charter.md", "file_type": "rationale", "degree": 5}, {"id": "roster_spawn_rules", "label": "Spawn Rules (usage control)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Spawn Rules (usage control)", "community": 0, "community_name": "Risk Limits and Profit Lock", "source_file": "roster.md", "file_type": "rationale", "degree": 2}, {"id": "charter_relative_strength", "label": "Strategy C: Relative Strength vs SPY", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Strategy C: Relative Strength vs SPY", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "charter.md", "file_type": "concept", "degree": 3}, {"id": "state_no_trade_run", "label": "Oct 21 Pre-Open Run: NO TRADE", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 32.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Oct 21 Pre-Open Run: NO TRADE", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "state.md", "file_type": "concept", "degree": 9}, {"id": "state_spy_regime_reading", "label": "SPY 769.05 vs Falling SMA50 768.29 (RANGE, borderline)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "SPY 769.05 vs Falling SMA50 768.29 (RANGE, borderline)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "state.md", "file_type": "concept", "degree": 3}, {"id": "watchlist_ko", "label": "KO (blocked: earnings Oct 27)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "KO (blocked: earnings Oct 27)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "concept", "degree": 4}, {"id": "watchlist_spy", "label": "SPY (regime gauge and parking sleeve)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "SPY (regime gauge and parking sleeve)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "concept", "degree": 3}, {"id": "watchlist_wmt", "label": "WMT (blocked: setup broken, earnings Nov 19)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "WMT (blocked: setup broken, earnings Nov 19)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "concept", "degree": 3}, {"id": "watchlist_xle", "label": "XLE (blocked: stale data, correlated with XOM)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "XLE (blocked: stale data, correlated with XOM)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "concept", "degree": 4}, {"id": "watchlist_xlv", "label": "XLV (blocked: stale data, FOMC)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "XLV (blocked: stale data, FOMC)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "concept", "degree": 3}, {"id": "watchlist_xom", "label": "XOM (blocked: earnings Oct 30, FOMC, oil sources conflict)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "XOM (blocked: earnings Oct 30, FOMC, oil sources conflict)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "concept", "degree": 5}, {"id": "watchlist", "label": "Watchlist", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 35.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Watchlist", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "watchlist.md", "file_type": "document", "degree": 10}, {"id": "charter_event_blackout", "label": "Event Blackout (3 trading days)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 27.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Event Blackout (3 trading days)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "charter.md", "file_type": "rationale", "degree": 7}, {"id": "charter_no_trade_valid", "label": "NO TRADE Is a Valid Result", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "NO TRADE Is a Valid Result", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "charter.md", "file_type": "rationale", "degree": 2}, {"id": "charter_regime_gate", "label": "Regime Gate (SPY RISK-OFF / TREND / RANGE)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Regime Gate (SPY RISK-OFF / TREND / RANGE)", "community": 1, "community_name": "Regime, Events and Current Verdict", "source_file": "charter.md", "file_type": "rationale", "degree": 5}, {"id": "charter_paper_account", "label": "moomoo Paper Account 428122 and $1,000 Ledger", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "moomoo Paper Account 428122 and $1,000 Ledger", "community": 2, "community_name": "Charter and Paper Account", "source_file": "charter.md", "file_type": "concept", "degree": 3}, {"id": "readme_graphify_out", "label": "graphify-out knowledge graph", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "graphify-out knowledge graph", "community": 2, "community_name": "Charter and Paper Account", "source_file": "README.md", "file_type": "concept", "degree": 2}, {"id": "readme_owner_commands", "label": "Owner Commands (PAUSE, RESUME, DETAIL, STATUS, LIVE STOCK)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Owner Commands (PAUSE, RESUME, DETAIL, STATUS, LIVE STOCK)", "community": 2, "community_name": "Charter and Paper Account", "source_file": "README.md", "file_type": "concept", "degree": 1}, {"id": "readme_read_order", "label": "Cycle Read Order", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Cycle Read Order", "community": 2, "community_name": "Charter and Paper Account", "source_file": "README.md", "file_type": "concept", "degree": 1}, {"id": "routine_r1", "label": "Step R1 Research Screen", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step R1 Research Screen", "community": 2, "community_name": "Charter and Paper Account", "source_file": "routine.md", "file_type": "concept", "degree": 5}, {"id": "routine_session_times", "label": "US Session Timing and DST Shift", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "US Session Timing and DST Shift", "community": 2, "community_name": "Charter and Paper Account", "source_file": "routine.md", "file_type": "concept", "degree": 2}, {"id": "routine_weekly_review", "label": "Weekly Review and graphify Update", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Weekly Review and graphify Update", "community": 2, "community_name": "Charter and Paper Account", "source_file": "routine.md", "file_type": "concept", "degree": 2}, {"id": "charter", "label": "Stock Council Charter", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Stock Council Charter", "community": 2, "community_name": "Charter and Paper Account", "source_file": "charter.md", "file_type": "document", "degree": 2}, {"id": "readme", "label": "Council Hub README", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 35.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Council Hub README", "community": 2, "community_name": "Charter and Paper Account", "source_file": "README.md", "file_type": "document", "degree": 10}, {"id": "readme_ledger_csv", "label": "ledger.csv (paper trade ledger)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "ledger.csv (paper trade ledger)", "community": 2, "community_name": "Charter and Paper Account", "source_file": "README.md", "file_type": "document", "degree": 3}, {"id": "routine", "label": "Daily Routine (AEDT)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Daily Routine (AEDT)", "community": 2, "community_name": "Charter and Paper Account", "source_file": "routine.md", "file_type": "document", "degree": 4}, {"id": "charter_reporting", "label": "Owner Reporting (one message per cycle)", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Owner Reporting (one message per cycle)", "community": 3, "community_name": "Agent Roster", "source_file": "charter.md", "file_type": "concept", "degree": 1}, {"id": "roster_challenger", "label": "Challenger Agent", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Challenger Agent", "community": 3, "community_name": "Agent Roster", "source_file": "roster.md", "file_type": "concept", "degree": 5}, {"id": "roster_coordinator", "label": "Coordinator (main session)", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Coordinator (main session)", "community": 3, "community_name": "Agent Roster", "source_file": "roster.md", "file_type": "concept", "degree": 12}, {"id": "roster_research", "label": "Research Agent", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 32.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Research Agent", "community": 3, "community_name": "Agent Roster", "source_file": "roster.md", "file_type": "concept", "degree": 9}, {"id": "roster_risk", "label": "Risk Agent", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 27.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Risk Agent", "community": 3, "community_name": "Agent Roster", "source_file": "roster.md", "file_type": "concept", "degree": 7}, {"id": "roster_sentiment", "label": "Sentiment Agent", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 27.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Sentiment Agent", "community": 3, "community_name": "Agent Roster", "source_file": "roster.md", "file_type": "concept", "degree": 7}, {"id": "routine_a", "label": "Step A After-Close News Pass", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step A After-Close News Pass", "community": 3, "community_name": "Agent Roster", "source_file": "routine.md", "file_type": "concept", "degree": 3}, {"id": "routine_rc", "label": "Step RC Risk then Challenger", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step RC Risk then Challenger", "community": 3, "community_name": "Agent Roster", "source_file": "routine.md", "file_type": "concept", "degree": 5}, {"id": "routine_x", "label": "Step X Place Paper Orders", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Step X Place Paper Orders", "community": 3, "community_name": "Agent Roster", "source_file": "routine.md", "file_type": "concept", "degree": 5}, {"id": "roster", "label": "Council Roster and Division of Labour", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 27.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Council Roster and Division of Labour", "community": 3, "community_name": "Agent Roster", "source_file": "roster.md", "file_type": "document", "degree": 7}, {"id": "routine_execution_gate", "label": "Execution Gate (Risk YES + no VETO + Quant confirmed + Research PASS + Sentiment not red)", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Execution Gate (Risk YES + no VETO + Quant confirmed + Research PASS + Sentiment not red)", "community": 3, "community_name": "Agent Roster", "source_file": "routine.md", "file_type": "rationale", "degree": 6}, {"id": "roster_sim_trade_tools", "label": "moomoo sim_trade_* tools (paper orders)", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "moomoo sim_trade_* tools (paper orders)", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "roster.md", "file_type": "code", "degree": 3}, {"id": "readme_handoff_dir", "label": "handoff/ step files", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "handoff/ step files", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "README.md", "file_type": "concept", "degree": 2}, {"id": "state_crypto_lane_on_hold", "label": "Crypto Lane On Hold", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Crypto Lane On Hold", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "state.md", "file_type": "concept", "degree": 2}, {"id": "state_known_calendar", "label": "Known Calendar (earnings, FOMC, GDP/PCE)", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Known Calendar (earnings, FOMC, GDP/PCE)", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "state.md", "file_type": "concept", "degree": 3}, {"id": "state_open_questions", "label": "Open Questions (sim stop order types, side enum)", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Open Questions (sim stop order types, side enum)", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "state.md", "file_type": "concept", "degree": 3}, {"id": "state_reentry_conditions", "label": "Re-entry Conditions", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Re-entry Conditions", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "state.md", "file_type": "concept", "degree": 2}, {"id": "state", "label": "Council State", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 32.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Council State", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "state.md", "file_type": "document", "degree": 9}, {"id": "charter_paper_only_rule", "label": "Paper Only Rule (sim_trade_* only)", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Paper Only Rule (sim_trade_* only)", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "charter.md", "file_type": "rationale", "degree": 4}, {"id": "roster_agent_rules", "label": "Rules for All Agents (read-only, caveman voice, N/A not estimate)", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Rules for All Agents (read-only, caveman voice, N/A not estimate)", "community": 4, "community_name": "Paper Only and Hub State", "source_file": "roster.md", "file_type": "rationale", "degree": 2}, {"id": "roster_moomoo_quote_tools", "label": "moomoo quote_* tools (read-only)", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "moomoo quote_* tools (read-only)", "community": 5, "community_name": "Company Background Checks", "source_file": "roster.md", "file_type": "code", "degree": 5}, {"id": "roster_web_and_fmp_tools", "label": "WebSearch / WebFetch / FMP", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "WebSearch / WebFetch / FMP", "community": 5, "community_name": "Company Background Checks", "source_file": "roster.md", "file_type": "code", "degree": 2}, {"id": "charter_analyst_cross_check", "label": "Analyst Cross-Check", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Analyst Cross-Check", "community": 5, "community_name": "Company Background Checks", "source_file": "charter.md", "file_type": "concept", "degree": 1}, {"id": "charter_background_check", "label": "Company Background Check", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 22.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Company Background Check", "community": 5, "community_name": "Company Background Checks", "source_file": "charter.md", "file_type": "concept", "degree": 5}, {"id": "charter_verdict_pass_watch_fail", "label": "Verdict PASS / WATCH / FAIL and Automatic FAIL Triggers", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Verdict PASS / WATCH / FAIL and Automatic FAIL Triggers", "community": 5, "community_name": "Company Background Checks", "source_file": "charter.md", "file_type": "concept", "degree": 1}, {"id": "state_data_caveats", "label": "Data Caveats (FMP plan limits, second-source verification)", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Data Caveats (FMP plan limits, second-source verification)", "community": 5, "community_name": "Company Background Checks", "source_file": "state.md", "file_type": "concept", "degree": 3}, {"id": "charter_pullback_uptrend", "label": "Strategy B: Pullback in Uptrend", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Strategy B: Pullback in Uptrend", "community": 6, "community_name": "Strategies and Universe", "source_file": "charter.md", "file_type": "concept", "degree": 1}, {"id": "charter_strategies_allowed", "label": "Allowed Strategies", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Allowed Strategies", "community": 6, "community_name": "Strategies and Universe", "source_file": "charter.md", "file_type": "concept", "degree": 4}, {"id": "charter_trend_breakout", "label": "Strategy A: Trend Breakout", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Strategy A: Trend Breakout", "community": 6, "community_name": "Strategies and Universe", "source_file": "charter.md", "file_type": "concept", "degree": 2}, {"id": "charter_universe_rules", "label": "Universe Rules", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Universe Rules", "community": 6, "community_name": "Strategies and Universe", "source_file": "charter.md", "file_type": "concept", "degree": 1}, {"id": "watchlist_cvx_v_unh_abbv", "label": "CVX, V, UNH, ABBV (blocked: 1 share > $200 cap)", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "CVX, V, UNH, ABBV (blocked: 1 share > $200 cap)", "community": 6, "community_name": "Strategies and Universe", "source_file": "watchlist.md", "file_type": "concept", "degree": 3}];
+const RAW_EDGES = [{"from": "roster_data_quant", "to": "roster_quant_skills", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_coordinator", "to": "roster_data_quant", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_data_quant", "to": "roster_moomoo_quote_tools", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster", "to": "roster_data_quant", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_execution_gate", "to": "roster_data_quant", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_q1", "to": "roster_data_quant", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_q2", "to": "roster_data_quant", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_data_quant", "to": "charter_regime_gate", "label": "implements", "title": "implements [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "roster_data_quant", "to": "charter_sizing_rule", "label": "implements", "title": "implements [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "roster_data_quant", "to": "charter_stop_rule", "label": "implements", "title": "implements [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "routine_c1", "to": "roster_coordinator", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_c1", "to": "routine_h", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_c1", "to": "state", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_c1", "to": "watchlist", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_q1", "to": "routine_c1", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_e", "to": "charter_profit_lock", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_a", "to": "routine_e", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_e", "to": "state", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_h", "to": "charter_profit_lock", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_spawn_rules", "to": "routine_h", "label": "rationale_for", "title": "rationale_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_h", "to": "roster_sentiment", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_h", "to": "routine_q2", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_q1", "to": "charter_regime_gate", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_q1", "to": "charter_stop_rule", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_s1", "to": "routine_q1", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_q2", "to": "routine_rc", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_r1", "to": "routine_s1", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_s1", "to": "roster_sentiment", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_drawdown_ladder", "to": "charter_sizing_rule", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_profit_lock", "to": "charter_drawdown_ladder", "label": "semantically_similar_to", "title": "semantically_similar_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "charter_sizing_rule", "to": "charter_portfolio_heat_limits", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_risk", "to": "charter_portfolio_heat_limits", "label": "implements", "title": "implements [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "watchlist_xle", "to": "charter_portfolio_heat_limits", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "charter_profit_lock", "to": "charter_stop_rule", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_profit_lock", "to": "state_open_questions", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_coordinator", "to": "charter_profit_lock", "label": "implements", "title": "implements [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "charter_sizing_rule", "to": "charter_stop_rule", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_sizing_rule", "to": "charter_paper_account", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_cvx_v_unh_abbv", "to": "charter_sizing_rule", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "watchlist_wmt", "to": "charter_stop_rule", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "roster_spawn_rules", "to": "routine_rc", "label": "rationale_for", "title": "rationale_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_strategies_allowed", "to": "charter_relative_strength", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_ko", "to": "charter_relative_strength", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "watchlist_xom", "to": "charter_relative_strength", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "state_no_trade_run", "to": "charter_no_trade_valid", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state", "to": "state_no_trade_run", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "charter_event_blackout", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "state_spy_regime_reading", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "watchlist_ko", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "watchlist_wmt", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "watchlist_xle", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "watchlist_xlv", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_no_trade_run", "to": "watchlist_xom", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_spy_regime_reading", "to": "charter_regime_gate", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_spy", "to": "state_spy_regime_reading", "label": "shares_data_with", "title": "shares_data_with [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "watchlist", "to": "watchlist_ko", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_ko", "to": "charter_event_blackout", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "charter_regime_gate", "to": "watchlist_spy", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist", "to": "watchlist_spy", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist", "to": "watchlist_wmt", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_xle", "to": "watchlist_xom", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist", "to": "watchlist_xle", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist", "to": "watchlist_xlv", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_xlv", "to": "charter_event_blackout", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "watchlist", "to": "watchlist_xom", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_xom", "to": "charter_event_blackout", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "readme", "to": "watchlist", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_r1", "to": "watchlist", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist", "to": "watchlist_cvx_v_unh_abbv", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_event_blackout", "to": "state_known_calendar", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_session_times", "to": "charter_event_blackout", "label": "conceptually_related_to", "title": "conceptually_related_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "roster_risk", "to": "charter_event_blackout", "label": "implements", "title": "implements [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "charter_no_trade_valid", "to": "charter_regime_gate", "label": "conceptually_related_to", "title": "conceptually_related_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "charter", "to": "charter_paper_account", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_paper_account", "to": "readme_ledger_csv", "label": "shares_data_with", "title": "shares_data_with [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "readme_graphify_out", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_weekly_review", "to": "readme_graphify_out", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "readme_owner_commands", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "readme_read_order", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_r1", "to": "charter_background_check", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine", "to": "routine_r1", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_r1", "to": "roster_research", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine", "to": "routine_session_times", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine", "to": "routine_weekly_review", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "charter", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "readme_handoff_dir", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "readme_ledger_csv", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "roster", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "routine", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "readme", "to": "state", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_x", "to": "readme_ledger_csv", "label": "shares_data_with", "title": "shares_data_with [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_reporting", "to": "roster_coordinator", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_coordinator", "to": "roster_challenger", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster", "to": "roster_challenger", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_execution_gate", "to": "roster_challenger", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_rc", "to": "roster_challenger", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_challenger", "to": "roster_risk", "label": "semantically_similar_to", "title": "semantically_similar_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "roster_coordinator", "to": "roster_research", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_coordinator", "to": "roster_risk", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_coordinator", "to": "roster_sentiment", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_coordinator", "to": "roster_sim_trade_tools", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_paper_only_rule", "to": "roster_coordinator", "label": "rationale_for", "title": "rationale_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster", "to": "roster_coordinator", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_x", "to": "roster_coordinator", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_research", "to": "roster_moomoo_quote_tools", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_research", "to": "roster_web_and_fmp_tools", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_research", "to": "charter_background_check", "label": "implements", "title": "implements [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster", "to": "roster_research", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_sentiment", "to": "roster_research", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_a", "to": "roster_research", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_execution_gate", "to": "roster_research", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster", "to": "roster_risk", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_execution_gate", "to": "roster_risk", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_rc", "to": "roster_risk", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_sentiment", "to": "roster_moomoo_quote_tools", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster", "to": "roster_sentiment", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_execution_gate", "to": "roster_sentiment", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_x", "to": "routine_a", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_rc", "to": "routine_x", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "routine_x", "to": "routine_execution_gate", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_paper_only_rule", "to": "roster_sim_trade_tools", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_open_questions", "to": "roster_sim_trade_tools", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_agent_rules", "to": "readme_handoff_dir", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state", "to": "state_crypto_lane_on_hold", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_crypto_lane_on_hold", "to": "charter_paper_only_rule", "label": "conceptually_related_to", "title": "conceptually_related_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "state", "to": "state_known_calendar", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_reentry_conditions", "to": "state_known_calendar", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state", "to": "state_open_questions", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state", "to": "state_reentry_conditions", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state", "to": "state_data_caveats", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "roster_agent_rules", "to": "charter_paper_only_rule", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_background_check", "to": "roster_moomoo_quote_tools", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_data_caveats", "to": "roster_moomoo_quote_tools", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "state_data_caveats", "to": "roster_web_and_fmp_tools", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_background_check", "to": "charter_analyst_cross_check", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_background_check", "to": "charter_verdict_pass_watch_fail", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_strategies_allowed", "to": "charter_pullback_uptrend", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_strategies_allowed", "to": "charter_universe_rules", "label": "conceptually_related_to", "title": "conceptually_related_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "charter_strategies_allowed", "to": "charter_trend_breakout", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "watchlist_cvx_v_unh_abbv", "to": "charter_trend_breakout", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "Risk Limits and Profit Lock", "count": 14}, {"cid": 1, "color": "#F28E2B", "label": "Regime, Events and Current Verdict", "count": 13}, {"cid": 2, "color": "#E15759", "label": "Charter and Paper Account", "count": 11}, {"cid": 3, "color": "#76B7B2", "label": "Agent Roster", "count": 11}, {"cid": 4, "color": "#59A14F", "label": "Paper Only and Hub State", "count": 9}, {"cid": 5, "color": "#EDC948", "label": "Company Background Checks", "count": 6}, {"cid": 6, "color": "#B07AA1", "label": "Strategies and Universe", "count": 5}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: true,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'dark')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref());
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'node' : 'nodes'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Click a node to inspect it</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [{"id": "daily_cycle_flow", "label": "Daily cycle step flow R1 to E", "nodes": ["routine_r1", "routine_s1", "routine_q1", "routine_c1", "routine_h", "routine_q2", "routine_rc", "routine_x", "routine_a", "routine_e"], "relation": "form", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "routine.md"}, {"id": "execution_gate_agents", "label": "Agents that must all clear a name before a paper order", "nodes": ["roster_research", "roster_sentiment", "roster_data_quant", "roster_risk", "roster_challenger", "roster_coordinator", "routine_execution_gate"], "relation": "participate_in", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "routine.md"}, {"id": "entry_risk_rules", "label": "Pre-entry rule set (sizing, regime gate, event blackout, background check)", "nodes": ["charter_sizing_rule", "charter_regime_gate", "charter_event_blackout", "charter_background_check", "charter_portfolio_heat_limits"], "relation": "form", "confidence": "INFERRED", "confidence_score": 0.85, "source_file": "charter.md"}];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        const positions = h.nodes
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>
