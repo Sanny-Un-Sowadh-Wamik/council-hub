@@ -19,6 +19,11 @@ AVTR | call | 60d +41%, 20d +11%, ~$17 | premium too small for fee rule? | 2026-
 DOCS, DOCU, BOX | call | strong but extended (20d +20-27%) | wait for pullback | 2026-10-21
 Price > $200 per share but fine for options (premium cap, not share cap): PAYC, VEEV, NTRA, ACN, IT, MANH, NOW, CRM, WDAY, CRL, MKTX - strikes need checking against the $120 premium cap.
 
+## A2. Council R1 verdicts 2026-10-21 night
+CHYM | call | PASS-cond (9/12); needs exit before Nov 4 earnings | trigger >31.08 & daily close > SMA50 30.74; Nov20 30C spread 26%, $230 premium fail | 2026-10-21
+OLLI | call | WATCH; SI 15.5% rising | trigger >95.78 & 60-min up; chain too wide/expensive | 2026-10-21
+DROPPED (FAIL): ESTC (insider selling), GTLB (target < price), HNGE (target +3%), ANF (target +2.7%). Blackout until after print: RNG Oct 22, CAKE Oct 27, CTSH Oct 29.
+
 ## B. Carry-overs from the stock lane
 KO | call | RS, near 55d high ~$94 | earnings Oct 27: no entry before print | 2026-10-21
 XOM, CVX | call | energy RS | earnings Oct 30; oil sources conflict | 2026-10-21
