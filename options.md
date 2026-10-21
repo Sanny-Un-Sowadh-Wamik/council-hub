@@ -13,3 +13,8 @@ Ledger: ledger.csv columns are reused; symbol = option code, qty = contracts, en
 ## Fees (owner screenshot 2026-10-21, moomoo AU Fixed Plan)
 Commission USD 0.10 + platform fee USD 0.40 = USD 0.50 per contract per side, before regulatory/clearing fees (assume ~USD 0.05-0.10 more per contract). Budget USD 1.20 per contract round trip (buy + sell). Paper account may not charge it; the ledger charges it anyway so results match real life.
 Rule: Risk rejects a trade if round-trip fees > 5% of the take-profit-1 gain (a $0.30 option, +60% = $18 gain per contract, fee $1.20 = 6.7% -> reject). Prefer contracts with premium >= $1.00. Record fees_usd in ledger.csv on every fill.
+
+## Entry timing filter (owner idea 2026-10-21: VWAP + EMA9) - FILTER ONLY, NOT A STRATEGY
+Use only AFTER the daily setup, gates and contract choice are done, at the 30-min check. Use quote_history_kline 5-min bars (ktype 6, extended_time 0): VWAP = cumulative turnover / cumulative volume since the 9:30 ET open; EMA9 of 5-min closes.
+CALL entry allowed only if price > VWAP and EMA9 > VWAP and EMA9 rising. PUT entry only if price < VWAP and EMA9 < VWAP and EMA9 falling. Otherwise wait for the next check (do not chase; the order expires at 15:50 ET if still not met).
+Quick test 2026-10-21 (4 liquid names, 5 days, 5-min bars, 30-min forward return of the underlying): 28 crossover signals, mean +4 bps (0.04%), win rate 54%, vs baseline -3 bps / 45%. Sample far too small to prove an edge, and 4 bps does not cover ~USD 1.20 per contract fees. Keep as a veto filter only; re-test monthly with more data.
