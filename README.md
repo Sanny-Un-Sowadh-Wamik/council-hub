@@ -1,3 +1,5 @@
+# READ MODE.md AND options.md FIRST. Current mode is OPTIONS ONLY; they override everything below where they conflict.
+
 # Council Hub (memory for the stock council)
 
 Read order at the start of every cycle: README -> state.md -> charter.md -> roster.md -> routine.md -> watchlist.md -> ledger.csv -> latest handoff files.
