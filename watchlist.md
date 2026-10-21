@@ -1,4 +1,4 @@
-# Watchlist (options mode) - Coordinator keeps current. Updated 2026-10-21 22:00 Melbourne
+# Watchlist (options mode) - Coordinator keeps current. Updated 2026-10-21 close (E step)
 Status = NOT CLEARED. Every name needs the full gate (Research, Sentiment, Quant, Risk, Challenger) and a liquid option chain (OI >= 500, spread <= 10%) before any trade. Earnings dates marked "?" are unverified: Research must confirm.
 Format: SYMBOL | side bias | why | blocker / to verify | last checked
 
@@ -20,8 +20,8 @@ DOCS, DOCU, BOX | call | strong but extended (20d +20-27%) | wait for pullback |
 Price > $200 per share but fine for options (premium cap, not share cap): PAYC, VEEV, NTRA, ACN, IT, MANH, NOW, CRM, WDAY, CRL, MKTX - strikes need checking against the $120 premium cap.
 
 ## A2. Council R1 verdicts 2026-10-21 night
-CHYM | call | PASS-cond (9/12); needs exit before Nov 4 earnings | trigger >31.08 & daily close > SMA50 30.74; Nov20 30C spread 26%, $230 premium fail | 2026-10-21
-OLLI | call | WATCH; SI 15.5% rising | trigger >95.78 & 60-min up; chain too wide/expensive | 2026-10-21
+CHYM | call | PASS-cond (9/12); close 30.37, AH 30.53, no news; needs exit before Nov 4 earnings | trigger >31.08 & daily close > SMA50 30.74; Nov20 30C spread 26%, $230 premium fail | 2026-10-21
+OLLI | call | WATCH; close 91.86, AH 91.80, no news; SI 15.5% rising | trigger >95.78 & 60-min up; chain too wide/expensive | 2026-10-21
 DROPPED (FAIL): ESTC (insider selling), GTLB (target < price), HNGE (target +3%), ANF (target +2.7%). Blackout until after print: RNG Oct 22, CAKE Oct 27, CTSH Oct 29.
 
 ## B. Carry-overs from the stock lane
@@ -50,4 +50,7 @@ Research adds names from the nightly full-market scan (max 25 total; drop names 
 
 ## F. Put candidates (bearish scan 2026-10-21, NOT cleared; first-page names, 157 total hits)
 MTZ ~$187 (60d -44%), DY ~$252 (-41%), MGM ~$29 (-38%), CRS ~$373, CW ~$495, DRS ~$34, RBA ~$81, KLAR ~$13: all need daily+60-min down, event check, chain check. Several (MGM, WULF, QNT) already fell >25% in 20d = late.
-SUNB | call | WATCH (live scan 2026-10-21); needs full background check, spread check; earnings ~Dec unconfirmed | Nov20 80C OI 1154 | 2026-10-21
+SUNB | call | WATCH, close 78.50 (live scan 2026-10-21); needs full background check, spread check; earnings ~Dec unconfirmed | Nov20 80C OI 1154 | 2026-10-21
+
+## G. After-close 2026-10-21 (Research)
+META AH +3.6% (697.52->722.64). TSLA AH -0.5%. TXN AH -0.2%. LRCX AH -6.0% (semis gap-down risk Oct 22; no semi entries). PG BMO Oct 22 (blackout). RNG Oct 22 (blackout). SPCX squeeze risk HIGH (unledgered sim short, not council).

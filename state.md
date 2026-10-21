@@ -1,6 +1,6 @@
 # State (update every cycle)
 
-Updated: 2026-10-21 ~23:40 AEDT (cycle R1/S1/Q1/C1)
+Updated: 2026-10-21 close (steps A+E, 21:16 UTC). Prior: 23:40 AEDT cycle R1/S1/Q1/C1
 Mode: PAPER, stock lane primary. Crypto spot lane CLOSED. Council uses moomoo only; no Coinbase tools (leftover USDC $21.12 sits untouched on Coinbase).
 Paper account: moomoo 428122, sim $1,000,000 preloaded; ledger equity $1,000; positions: none.
 Open orders: none. Stage of profit lock: n/a.
@@ -56,3 +56,5 @@ Check 2026-10-21 19:08 UTC (15:08 ET): NO CHANGE. CHYM 30.44 (<31.08), OLLI 91.2
 Check 2026-10-21 19:17 UTC (15:17 ET, Q2/RC/X run): NO TRADE. Nothing staged. CHYM 30.47 (<31.08), OLLI 91.15 (<95.78), SPY 772.06. Q2/Risk/Challenger not spawned, no orders, ledger empty.
 
 Check 2026-10-21 19:40 UTC (15:40 ET, hourly run): NO CHANGE. CHYM 30.58 (<31.08), OLLI 91.37 (<95.78), SPY 772.96, SUNB 79.08 (Research not PASS). No option positions, ledger empty, nothing staged, no orders, nobody spawned. SPCX short -2 @160.215 (cur 158.41) unledgered, untouched.
+
+After-close A+E 2026-10-21 (21:16 UTC): NO TRADE day. Ledger empty, council paper P/L $0.00, equity $1,000, no orders, nothing staged, no profit-lock stages. SPY closed 773.09 (> ~769: re-entry cond 1 of 2 met; need Oct 22 close above ~769 with SMA50 flat/rising). QQQ 725.20. Marks: CHYM 30.37 (<31.08), OLLI 91.86 (<95.78), SUNB 78.50. AH: META +3.6%, TSLA -0.5%, TXN -0.2%, LRCX -6.0%. Oct 22: PG BMO, RNG, jobless claims 8:30 ET. Oct 27-29 macro cluster no-entry. FLAG (owner confirm origin): sim acc 428122 holds unledgered SHORT SPCX -2 @160.215, cur 158.87, unrealised +$2.69; SPCX +7.8% on day on blockbuster results/Tesla merger talk, squeeze risk HIGH. Not council-made, untouched. Sim total_asset 1,000,000.69. Bars5m data log not run this cycle. See handoff/afterclose_20261021.md.
