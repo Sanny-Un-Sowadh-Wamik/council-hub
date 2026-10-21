@@ -9,3 +9,7 @@ Exits (Coordinator enforces at each 30-min check, limit sell at bid/mid, market 
 Account guard: day loss >= 5% ($50) or week loss >= 10% ($100) = no new entries until next session/Monday. Equity <= $900: half size. <= $800: halt, owner decides. <= $750: close all, report to owner.
 Gates (unchanged): Research PASS, Sentiment not red, Quant confirmed (specifies underlying level, contract, entry limit, exit levels, planned hold), Risk YES (recomputes premium, caps, events, regime, IV), Challenger NO VETO (second source for price, IV, earnings date). Doubt = NO. "No trade" is a valid result.
 Ledger: ledger.csv columns are reused; symbol = option code, qty = contracts, entry/stop/t1 = premium per share, risk_usd = premium x 100 x qty. Add a note per trade in theses/.
+
+## Fees (owner screenshot 2026-10-21, moomoo AU Fixed Plan)
+Commission USD 0.10 + platform fee USD 0.40 = USD 0.50 per contract per side, before regulatory/clearing fees (assume ~USD 0.05-0.10 more per contract). Budget USD 1.20 per contract round trip (buy + sell). Paper account may not charge it; the ledger charges it anyway so results match real life.
+Rule: Risk rejects a trade if round-trip fees > 5% of the take-profit-1 gain (a $0.30 option, +60% = $18 gain per contract, fee $1.20 = 6.7% -> reject). Prefer contracts with premium >= $1.00. Record fees_usd in ledger.csv on every fill.
