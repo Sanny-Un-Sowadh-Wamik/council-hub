@@ -32,3 +32,7 @@ Data logging (after-close task, every trading day): for each held, staged and to
 
 ## Box Theory (previous-day range) - LOG ONLY, never trades (owner shared 2026-10-21)
 Box = previous day's high/low. Near top of box: fade short; near bottom: fade long; middle: nothing. Confirmation: one reversal candle on 5-min. This is mean reversion and conflicts with our trend-following direction, and comments report heavy losses in trending markets. Status: OFF. Add to the daily data log: yesterday's high/low, where price sat in the box at the 10:07 ET and 12:07 ET checks (top/middle/bottom), and what the box would have signalled. Test with the monthly data review, same bar as the other filters (>= 100 signals, beats unfiltered, owner approves). Also useful as a LEVEL: yesterday's high/low are valid support/resistance for choosing option strikes and exits.
+
+## Anti-martingale rules (owner shared QUANTLAB warning 2026-10-21)
+Hard bans: no averaging down, no doubling after a loss, no rolling a losing option to a later date, no removing or widening a stop, no stop-less position, no grid/martingale logic. A new entry on the same underlying after a loss needs a fresh signal and normal sizing (half size after 2 losses in a row).
+Reporting: never judge or report results by win rate alone. Weekly review and owner summaries show win rate AND average win, average loss, expectancy per trade ($), worst loss, and max drawdown vs the $1,000 ledger.
