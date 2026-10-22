@@ -36,3 +36,6 @@ Each agent reads ONLY its own playbook at the start of its step (instead of load
 - Challenger: /home/claude/council-skills/_merged/council-challenger/SKILL.md
 - Coordinator: /home/claude/council-skills/_merged/council-coordinator/SKILL.md
 Playbook additions NOT in the owner's original orders (owner may veto): Risk: 70% advisory exposure ceiling in RANGE, 24h cooldown after 2 consecutive losing closes, 5-trading-day block on re-entry after a stop-out, default 10-trading-day hold when not stated, chase test (price <= trigger + 0.5 ATR). Research: 0-2 scorecard with PASS >= 70%, FAIL < 50%, extra FAIL triggers labelled "added". Sentiment: SPY tone amber below -1%, red below -2%. Coordinator: markdown thesis notes in /home/claude/council-hub/theses/ instead of trader-memory-core script; half size after 2 losses.
+
+## Options skills (2026-10-22)
+All roles read council-skills/_merged/council-options/SKILL.md plus their own playbook. MODE.md and options.md override.
